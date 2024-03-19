@@ -21,7 +21,17 @@ app.get('/api/data', async (req, res) => {
     }
 });
 
-
+app.get('/api/find/tweet', async (req, res) => {
+    try {
+        const { AccountID } = req.query;
+        const data = await TweetData.findOne({ AccountID }, {"TweetData.TweetID": 1, _id: 0});
+        //console.log(data)
+        res.json(data);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+});
 
 app.get('/api/find/account', async (req, res) => {
     const { AccountID } = req.query;
