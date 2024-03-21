@@ -1,9 +1,10 @@
 import axios from 'axios';
+import { forceRadial } from 'd3';
 
 let nodes = [], links = [];
 let dataCount = {accountCount: 0, urlCount: 0, tweetCount: 0};
 
-const fetchData = async () => {
+const fetchDataAll = async () => {
     try {
         const response = await axios.get('http://localhost:4000/api/data');
         return response.data;
@@ -14,9 +15,9 @@ const fetchData = async () => {
 };
 
 
-const findData = async (endpiont, accountID) => {
+const fetchData = async (endpiont, id) => {
     try {
-        const response = await axios.get('http://localhost:4000/api/find/' + endpiont, { params: { AccountID: accountID }});
+        const response = await axios.get('http://localhost:4000/api/' + endpiont, { params: { ID : id }});
         return response.data;
     } catch (error) {
         console.error(error);
@@ -25,13 +26,14 @@ const findData = async (endpiont, accountID) => {
 };
 
 const tweetNodeCreate = async (accountNode) => {
-    const tweetdata = await findData("tweet", accountNode.id);
-    const tweetNodes = tweetdata.TweetData.map(d => {
-        const tweetID = d.TweetID;
+    const tweetdata = await fetchData("data/tweet", accountNode.id);
+    //const tweetNodes = [];
+    tweetdata.TweetData.forEach(d => {
         let tweetNode = {
-            id: tweetID,
-            group: "Tweet",
+            id: d.TweetID,
+            group: "Tweet"
         };
+        nodes.push(tweetNode);
         let link = {
             source: accountNode,
             target: tweetNode,
@@ -39,25 +41,46 @@ const tweetNodeCreate = async (accountNode) => {
         };
         links.push(link);
         dataCount.tweetCount += 1;
-        return tweetNode;
+        //tweetNodes.push(tweetNode);
     });
-    return tweetNodes;
+    //return tweetNodes;
 }
 
+const urlNodeCreate = async (Node, url) => {
+    url.forEach(url => {
+        let urlNode = {
+            id: url,
+            group: "URL",
+        };
+        nodes.push(urlNode);
+        let link = {
+            source: Node,
+            target: urlNode,
+            value: 3
+        };
+        links.push(link);
+        dataCount.urlCount += 1;
+        //tweetNodes.push(tweetNode);
+    });
+    //return tweetNodes;
+}
 
 export const nodeCreate = async () => {
     try {
-        const data = await fetchData();
+        const data = await fetchDataAll();
+
         for (const d of data) {
-            const accountID = d.AccountID
             let accountNode = {
-                id: accountID,
-                group: "Account",
+                id: d.AccountID,
+                group: "Account"
             };
+
             nodes.push(accountNode);
-            const tweetNodes = await tweetNodeCreate(accountNode);
-            nodes.push(...tweetNodes);
             dataCount.accountCount += 1;
+
+            const urlNodes = await urlNodeCreate(accountNode, d.AccountDescriptionURL)
+            const tweetNodes = await tweetNodeCreate(accountNode);
+
         }
 
         console.log(nodes);
@@ -75,38 +98,23 @@ export const nodeCreate = async () => {
 
 export const nodeInformation = async (d) => {
     try {
-        let info;
+        let data;
         if (d.group === "Account") {
-            const data = await findData("account", d.id);
-            //console.log(data)
-            info = [
-                "Group : " + d.group,
-                "AccountID : " + data.AccountID,
-                "AccountNickname : " + data.AccountNickname,
-                "AccountName : " + data.AccountName,
-                "AccountCreated : " + data.AccountCreated,
-                "AccountDescription : " + data.AccountDescription,
-                "AccountEntities : " + data.AccountEntities,
-                "AccountDescriptionHashtag : " + data.AccountDescriptionHashtag,
-                "AccountDescriptionURL : " + data.AccountDescriptionURL,
-                "AccountDescriptionMention : " + data.AccountDescriptionMention,
-                "AccountLocation : " + data.AccountLocation,
-                "AccountProfileImageURL : " + data.AccountProfileImageURL,
-                "AccountFollowersCount : " + data.AccountFollowersCount,
-                "AccountFollowingCount : " + data.AccountFollowingCount,
-                "AccountTweetCount : " + data.AccountTweetCount,
-                "AccountListedCount : " + data.AccountListedCount,
-                "AccountLikeCount : " + data.AccountLikeCount,
-                "AccountURL : " + data.AccountURL,
-                "AccountVerified : " + data.AccountVerified
-            ];
-        } else if (d.group === "URL") {
-            info = [
-                "Group : " + d.group,
-                "ID : , " + d.id
-            ];
+            data = await fetchData("find/account", d.id);
+        } 
+        else if (d.group === "URL") {
+            data = {"URL": d.id };
         }
-        return info
+        else if (d.group === "Tweet") {
+            //data = {"id": d.id};
+            data = await fetchData("find/tweet", d.id);
+            data = data.TweetData[0]
+            delete data.TweetContentPreprocessing;
+            delete data.TweetEntities;
+            delete data.TweetContextAnnotations;
+        }
+
+        return data
     } catch (error) {
         console.error(error);
         return null;

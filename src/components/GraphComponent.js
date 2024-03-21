@@ -87,27 +87,72 @@ const GraphComponent = ({ data }) => {
                         .attr("font-size", "30px")
                         .attr("fill", "red");
                 
-                    info.forEach((i, index) => {
-                        const text = infoSvg.append("text")
-                            .attr("x", 10)
-                            .attr("y", 70 + index * 20)
-                            .text(i)
-                            .attr("font-family", "sans-serif")
-                            .attr("font-size", "20px")
-                            .attr("fill", "black");
-                    
-                        if (d.group === "URL" && i.startsWith("ID : ")) {
-                            text.text(i.split(",")[0]);
-                
-                            var urlText = infoSvg.append("text")
-                                .attr("x", 50)
-                                .attr("y", 70 + index * 20)
-                                .text(i.split(",")[1])
-                                .style("cursor", "pointer")
-                                .attr("fill", "blue")
-                                .style("text-decoration", "underline")
-                                .on("click", () => window.open(d.id, "_blank"));
-                        }
+                    const textbox = infoSvg.append("foreignObject")
+                        .attr("x", 10)
+                        .attr("y", 60)
+                        .attr("width", infoWidth - 20)
+                        .attr("height", infoHeight - 70);
+
+                    const div = textbox.append("xhtml:div")
+                        .style("width", "100%")
+                        .style("height", "100%")
+                        .style("overflow", "auto");
+
+                    Object.entries(info).forEach(([key, value]) => {
+                        if (key.includes("URL")) {
+                            if (Array.isArray(value)) {
+                                div.append("xhtml:p")
+                                    .style("margin", "0px")
+                                    .style("padding", "5px")
+                                    .style("font-size", "15px")
+                                    .style("font-weight", "bold")
+                                    .text(key)
+                                value.forEach((value) => {
+                                    div.append("xhtml:a")
+                                        .attr("href", value)
+                                        .attr("target", "_blank")
+                                        .style("display", "block")
+                                        .style("margin", "0px")
+                                        .style("padding", "7px")
+                                        .text(value);
+                                });
+                                div.append("xhtml:p")
+                                    .style("margin", "0px")
+                                    .style("margin-bottom", "10px")
+                                    .style("padding", "5px")
+                                    .style("border-bottom", "1px solid #ccc");
+                            } else {
+                                div.append("xhtml:p")
+                                    .style("margin", "0px")
+                                    .style("padding", "5px")
+                                    .style("font-size", "15px")
+                                    .style("font-weight", "bold")
+                                    .text(key)
+                                div.append("xhtml:a")
+                                    .attr("href", value)
+                                    .attr("target", "_blank")
+                                    .style("display", "block")
+                                    .style("margin", "0px")
+                                    .style("margin-bottom", "10px")
+                                    .style("padding", "7px")
+                                    .style("border-bottom", "1px solid #ccc")
+                                    .text(value);
+                            }
+                            
+                        } else {
+                            div.append("xhtml:p")
+                                .style("margin", "0")
+                                .style("padding", "5px")
+                                .style("font-size", "15px")
+                                .style("font-weight", "bold")
+                                .text(key);
+                            div.append("xhtml:p")
+                                .style("margin", "0")
+                                .style("margin-bottom", "10px")
+                                .style("padding", "7px")
+                                .style("border-bottom", "1px solid #ccc")
+                                .text(value);
+                    }
                     });
                 }).catch((error) => {
                     console.error("에러:", error);
