@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { forceRadial } from 'd3';
+
 
 let nodes = [], links = [];
 let dataCount = {accountCount: 0, urlCount: 0, tweetCount: 0};
@@ -14,10 +14,9 @@ const fetchDataAll = async () => {
     }
 };
 
-
-const fetchData = async (endpiont, id) => {
+const fetchDataAll_1 = async (currentTime) => {
     try {
-        const response = await axios.get('http://localhost:4000/api/' + endpiont, { params: { ID : id }});
+        const response = await axios.get('http://localhost:4000/api/data/date', { params: { date : currentTime }});
         return response.data;
     } catch (error) {
         console.error(error);
@@ -25,50 +24,64 @@ const fetchData = async (endpiont, id) => {
     }
 };
 
-const tweetNodeCreate = async (accountNode) => {
-    const tweetdata = await fetchData("data/tweet", accountNode.id);
-    //const tweetNodes = [];
-    tweetdata.TweetData.forEach(d => {
+const fetchData = async (endpiont, id, currentTime) => {
+    try {
+        const response = await axios.get('http://localhost:4000/api/' + endpiont, { params: { ID : id, date : currentTime }});
+        return response.data;
+    } catch (error) {
+        console.error(error);
+        throw error;
+    }
+};
+
+const tweetNodeCreate = async (accountNodeId, currentTime) => {
+    const tweetdata = await fetchData("data/tweet", accountNodeId, currentTime);
+    tweetdata.TweetData.forEach(async d => {
         let tweetNode = {
             id: d.TweetID,
             group: "Tweet"
         };
         nodes.push(tweetNode);
         let link = {
-            source: accountNode,
-            target: tweetNode,
-            value: 3
+            source: accountNodeId,
+            target: d.TweetID,
+            valut: 3
         };
         links.push(link);
         dataCount.tweetCount += 1;
-        //tweetNodes.push(tweetNode);
+        await urlNodeCreate(d.TweetID, d.TweetContentURL)
     });
-    //return tweetNodes;
 }
 
-const urlNodeCreate = async (Node, url) => {
+const urlNodeCreate = async (targetNodeId, url) => {
     url.forEach(url => {
-        let urlNode = {
-            id: url,
-            group: "URL",
-        };
-        nodes.push(urlNode);
+        const urlNodeExists = nodes.some(node => node.id === url);
+        if (!urlNodeExists) {
+            let urlNode = {
+                id: url,
+                group: "URL",
+            };
+            nodes.push(urlNode);
+            dataCount.urlCount += 1;
+        }
+
         let link = {
-            source: Node,
-            target: urlNode,
+            source: targetNodeId,
+            target: url,
             value: 3
         };
         links.push(link);
-        dataCount.urlCount += 1;
         //tweetNodes.push(tweetNode);
     });
     //return tweetNodes;
 }
 
-export const nodeCreate = async () => {
+export const nodeCreate = async (currentTime) => {
     try {
-        const data = await fetchDataAll();
-
+        nodes = [];
+        links = [];
+        dataCount = {accountCount: 0, urlCount: 0, tweetCount: 0};
+        const data = await fetchDataAll_1(currentTime);
         for (const d of data) {
             let accountNode = {
                 id: d.AccountID,
@@ -78,13 +91,9 @@ export const nodeCreate = async () => {
             nodes.push(accountNode);
             dataCount.accountCount += 1;
 
-            const urlNodes = await urlNodeCreate(accountNode, d.AccountDescriptionURL)
-            const tweetNodes = await tweetNodeCreate(accountNode);
-
+            await urlNodeCreate(accountNode.id, d.AccountDescriptionURL)
+            await tweetNodeCreate(accountNode.id, currentTime);
         }
-
-        console.log(nodes);
-
         return {
             nodes: nodes,
             links: links,

@@ -25,7 +25,9 @@ app.get('/api/data', async (req, res) => {
 app.get('/api/data/tweet', async (req, res) => {
     try {
         const { ID } = req.query;
-        const data = await TweetData.findOne({ 'AccountID' : ID }, {"TweetData.TweetID": 1, _id: 0});
+        const { date } = req.query;
+        //console.log(date)
+        const data = await TweetData.findOne({ 'AccountID' : ID, 'TweetData.TweetCreated' : { $lte : new Date(date) } }, {"AccountID" : 1, "TweetData.TweetID": 1, "TweetData.TweetContentURL": 1, _id: 0});
         //console.log(data)
         res.json(data);
     } catch (error) {
@@ -49,8 +51,22 @@ app.get('/api/find/account', async (req, res) => {
 app.get('/api/find/tweet', async (req, res) => {
     const { ID } = req.query;
     try {
+        //console.log(ID)
         const data = await TweetData.findOne({"TweetData.TweetID": ID}, {"TweetData.$": 1});
+        //console.log(data)
         res.json(data);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+});
+
+app.get('/api/data/date', async (req, res) => {
+    const { date } = req.query;
+    try {
+        const data = await TweetData.find({'TweetData.TweetCreated' : { $lte : new Date(date) } }, {"AccountID" : 1, 'AccountDescriptionURL': 1, _id: 0});
+        res.json(data);
+        //console.log(data)
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Internal Server Error' });
